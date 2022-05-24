@@ -1,4 +1,0 @@
-D:/Programming/sylar/CMakeFiles/sylar.dir
-D:/Programming/sylar/CMakeFiles/test.dir
-D:/Programming/sylar/CMakeFiles/edit_cache.dir
-D:/Programming/sylar/CMakeFiles/rebuild_cache.dir

@@ -1,3 +1,0 @@
-D:\CMake\bin\cmake.exe -E rm -f CMakeFiles\sylar.dir/objects.a
-D:\TDM-GCC\bin\ar.exe qc CMakeFiles\sylar.dir/objects.a @CMakeFiles\sylar.dir\objects1.rsp
-D:\TDM-GCC\bin\g++.exe  -O0 -g -std=c++11 -Wall -Wno-deprecated -Wno-unused-funcion -shared -o lib\libsylar.dll -Wl,--out-implib,lib\libsylar.dll.a -Wl,--major-image-version,0,--minor-image-version,0 -Wl,--whole-archive CMakeFiles\sylar.dir/objects.a -Wl,--no-whole-archive @CMakeFiles\sylar.dir\linklibs.rsp

@@ -1,5 +1,8 @@
 #include "../sylar/log.h"
+#include "../sylar/utils.h"
 #include <iostream>
+#include <thread>
+
 
 int main(){
     
@@ -18,10 +21,19 @@ int main(){
     "%d [%p] %f %l %m %n"
     const char* file, int32_t line, uint32_t elapse, uint32_t threadid, uint32_t fiber_id, uint64_t time
 */
+    // SYLAR_LOG_DEBUG(logger, "Test Macro");
+    sylar::FileLogAppender::ptr file_appender(new sylar::FileLogAppender("./log.txt"));
+    logger->addAppender(file_appender);
+    SYLAR_LOG_ERROR(logger) << "Hello world1";
 
-    sylar::LogEvent::ptr event(new sylar::LogEvent(__FILE__, __LINE__, 0, 1, 2, time(0)));
-    event->getSS() << "Hello Sylar";
-    logger->log(sylar::LogLevel::DEBUG, event);
+    sylar::LogFormatter::ptr fmt(new sylar::LogFormatter("%d%T%m\n"));
+    file_appender->setFormatter(fmt);
+
+    file_appender->setLevel(sylar::LogLevel::ERROR);
+    SYLAR_LOG_DEBUG(logger) << "Hello world2";
     std::cout << "Finished" << std::endl;
+
+    auto l = sylar::LoggerMgr::GetInstance()->getLogger("xx");
+    SYLAR_LOG_INFO(l) << "xxxxx";
     return 0;
 }

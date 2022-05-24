@@ -2,6 +2,19 @@
 #include <map>
 #include <functional>
 
+ int vasprintf (char **ptr, const char *format, va_list ap) 
+ { 
+   int len; 
+  
+    len = _vscprintf_p (format, ap) + 1; 
+   *ptr = (char *) malloc (len * sizeof (char)); 
+  if (!*ptr) 
+    { 
+      return -1; 
+    }  
+   return _vsprintf_p (*ptr, len, format, ap); 
+} 
+
 namespace sylar{
 /*
     %m -- 消息体
@@ -57,6 +70,7 @@ class FiberIdFormatItem : public LogFormatter::FormatItem{
 public:
     FiberIdFormatItem(const std::string& fmt = ""){};
     void format(std::shared_ptr<sylar::Logger> logger,LogLevel::Level level, std::ostream& os, LogEvent::ptr event) override{
+        // std::cout << "[Debug Info]" << event->getFiberId() << std::endl;
         os << event->getFiberId();
     };
 };
@@ -113,6 +127,16 @@ public:
 private:
     std::string m_string;
 };
+
+class TabFormatItem : public LogFormatter::FormatItem{
+public:
+    TabFormatItem(const std::string& fmt = "") : m_string(fmt) {};
+    void format(std::shared_ptr<sylar::Logger> logger,LogLevel::Level level, std::ostream& os, LogEvent::ptr event) override{
+        os << "\t";
+    };
+private:
+    std::string m_string;
+};
 const char* LogLevel::ToString(LogLevel::Level level){
     switch(level){
 #define XX(name) \
@@ -133,7 +157,7 @@ const char* LogLevel::ToString(LogLevel::Level level){
 Logger::Logger(const std::string& name) : m_name(name), m_level(LogLevel::DEBUG) {
     // std::string temp;
     // std::cin >> temp;
-    m_formatter.reset(new LogFormatter("%d [%p] <%f:%l>\t%m %n"));
+    m_formatter.reset(new LogFormatter("%d{%Y-%m-%d %H:%M:%S}%T%t%T%F%T[%p]%T[%c]%T<%f:%l>%T%m%n"));
 }
 
 void Logger::log(LogLevel::Level level, LogEvent::ptr event){
@@ -197,16 +221,22 @@ bool FileLogAppender::reopen(){
     if (m_filestream){
         m_filestream.close();
     }
-    m_filestream.open(m_filename);
+    m_filestream.open(m_filename, std::ios::app);
     return !!m_filestream;
 }
 
 
-
+// 此时是线程不安全，后续需要加锁之类的
 void FileLogAppender::log(std::shared_ptr<sylar::Logger> logger, LogLevel::Level level, LogEvent::ptr event){
-    if (level >= m_level){
-        std::cout << m_formatter->format(logger, level, event);
+    if (!m_filestream.is_open()){
+        if (!reopen()){
+            return;
+        }
     }
+    if (level >= m_level){
+        m_filestream << m_formatter->format(logger, level, event);
+    }
+    m_filestream.close();
 }
 
 LogFormatter::LogFormatter(const std::string& pattern) : m_pattern(pattern){
@@ -314,6 +344,8 @@ void LogFormatter::init(){
         XX(d, DateTimeFormatItem),          //d:时间
         XX(f, FilenameFormatItem),          //f:文件名
         XX(l, LineFormatItem),              //l:行号
+        XX(T, TabFormatItem),              //T:tab
+        XX(F, FiberIdFormatItem),
     #undef XX
     };
 
@@ -333,14 +365,41 @@ void LogFormatter::init(){
         //std::cout << "(" << std::get<0>(i) << ") - (" << std::get<1>(i) << ") - (" << std::get<2>(i) << ")" << std::endl;
     }
 }
-LogEvent::LogEvent(const char* file, int32_t line, uint32_t elapse, uint32_t threadid, uint32_t fiber_id, uint64_t time):
+LogEvent::LogEvent(std::shared_ptr<Logger> logger, const char* file, int32_t line, 
+        uint32_t elapse, uint32_t threadid, uint32_t fiber_id, uint64_t time, LogLevel::Level level):
+    m_logger(logger),
     m_file(file),
     m_line(line),
     m_elapse(elapse),
     m_threadId(threadid),
     m_fiberId(fiber_id),
-    m_time(time){
+    m_time(time),
+    m_level(level){
     // m_ss << "Hello Sylar";
 }
+LogEventWrap::LogEventWrap(LogEvent::ptr event) : m_event(event){};
+LogEventWrap::~LogEventWrap(){
+    
+    m_event->getLogger()->log(m_event->getLevel(), m_event);
+    // std::cout << "[Debug Info] Descons LogEvent" << std::endl; 
+};
+std::stringstream& LogEventWrap::getSS(){
+    return m_event->getSS();
+};
+
+Logger::ptr LoggerManager::getLogger(const std::string& name){
+    auto it = m_loggers.find(name);
+    return it == m_loggers.end() ?  m_root : it->second;
+};
+
+LoggerManager::LoggerManager(){
+    m_root.reset(new Logger);
+    m_root->addAppender(LogAppender::ptr(new StdoutLogAppender));
+};
+
+void LoggerManager::init(){
+    
+};
+
 
 } //finish sylar

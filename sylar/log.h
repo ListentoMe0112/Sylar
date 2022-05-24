@@ -1,5 +1,5 @@
 #pragma once
-#include <string>
+#include <cstring>
 #include <stdint.h>
 #include <memory>
 #include <list>
@@ -11,6 +11,24 @@
 #include <ctime>
 #include <cstdio>
 #include <cstring>
+#include "utils.h"
+#include <stdarg.h>
+#include <map>
+#include "singleton.h"
+
+
+// 构建临时对象logeventwrap并借由析构函数实现触发log
+#define SYLAR_LOG_LEVEL(logger, level) \
+    if (logger->getLevel() <= level) \
+        sylar::LogEventWrap(sylar::LogEvent::ptr(new sylar::LogEvent(logger, __FILE__, __LINE__, 0, sylar::GetThreadId(),\
+                    sylar::GetFiberId(), time(0), level))).getSS()
+
+
+#define SYLAR_LOG_DEBUG(logger) SYLAR_LOG_LEVEL(logger, sylar::LogLevel::DEBUG)
+#define SYLAR_LOG_INFO(logger) SYLAR_LOG_LEVEL(logger, sylar::LogLevel::INFO)
+#define SYLAR_LOG_WARN(logger) SYLAR_LOG_LEVEL(logger, sylar::LogLevel::WARN)
+#define SYLAR_LOG_ERROR(logger) SYLAR_LOG_LEVEL(logger, sylar::LogLevel::ERROR)
+#define SYLAR_LOG_FATAL(logger) SYLAR_LOG_LEVEL(logger, sylar::LogLevel::FATAL)
 
 namespace sylar{
 
@@ -34,7 +52,8 @@ class LogEvent {
 public:
     using ptr = std::shared_ptr<LogEvent>;
     // typedef std::shared_ptr<LogEvent> ptr;
-    LogEvent(const char* file, int32_t line, uint32_t elapse, uint32_t threadid, uint32_t fiber_id, uint64_t time);
+    LogEvent(std::shared_ptr<Logger> logger, const char* file, int32_t line, 
+            uint32_t elapse, uint32_t threadid, uint32_t fiber_id, uint64_t time, LogLevel::Level level);
     const char* getFile() const {return m_file;};
     int32_t getLine() const {return m_line;};
     uint32_t getElapse() const {return m_elapse;};
@@ -43,14 +62,28 @@ public:
     uint64_t getTime() const {return m_time;};
     std::string getContent() const {return m_ss.str();};
     std::stringstream& getSS() { return m_ss; };
+    std::shared_ptr<Logger> getLogger() const {return m_logger;};
+    LogLevel::Level getLevel() const {return m_level;};
 private:
+    std::shared_ptr<Logger> m_logger;
     const char* m_file = nullptr;   // 文件名
     int32_t m_line = 0;             // 行号
-    uint32_t m_elapse;          // 程序起到现在的毫秒数
-    int32_t m_threadId;         // 线程号
+    uint32_t m_elapse = 0;          // 程序起到现在的毫秒数
+    int32_t m_threadId = 0;         // 线程号
     uint32_t m_fiberId = 0;         // 协程号
     uint64_t m_time = 0;                // 时间戳
     std::stringstream m_ss;         // 内容
+    LogLevel::Level m_level;
+};
+
+class LogEventWrap{
+public:
+    LogEventWrap(LogEvent::ptr event);
+    LogEvent::ptr getEvent() const { return m_event;}
+    ~LogEventWrap();
+    std::stringstream& getSS();
+private:
+    LogEvent::ptr m_event;
 };
 
 // 日志格式器
@@ -80,13 +113,14 @@ class LogAppender {
 public:
     using ptr = std::shared_ptr<LogAppender>;
     // typedef std::shared_ptr<LogAppender> ptr;
-    LogAppender(){};
-    virtual ~LogAppender(){};
     virtual void log(std::shared_ptr<sylar::Logger>, LogLevel::Level level, LogEvent::ptr event) = 0;
     void setFormatter(LogFormatter::ptr formatter) {m_formatter = formatter;};
     LogFormatter::ptr getFormatter() const {return m_formatter;};
+    void setLevel(LogLevel::Level level) {m_level = level;};
+    LogLevel::Level getLevel() const {return m_level;};
+    virtual ~LogAppender(){};
 protected:
-    LogLevel::Level m_level;
+    LogLevel::Level m_level = LogLevel::DEBUG;
     LogFormatter::ptr m_formatter;
 };
 
@@ -110,10 +144,12 @@ public:
     LogLevel::Level getLevel() const {return m_level;};
     void setLevel(LogLevel::Level level) {m_level = level;};
     const std::string& getName() const {return m_name;};
+
 private:
     std::string m_name;                         // 日志名称
     std::list<LogAppender::ptr> m_appenders;    // Appender集合
     LogFormatter::ptr m_formatter;
+
 protected:
     LogLevel::Level m_level;                    // 日志级别
 };
@@ -123,7 +159,6 @@ class StdoutLogAppender : public LogAppender {
 public:
     using ptr = std::shared_ptr<StdoutLogAppender>;
     void log(std::shared_ptr<sylar::Logger> logger, LogLevel::Level level, LogEvent::ptr event) override;
-    ~StdoutLogAppender(){};
 private:
 };
 
@@ -132,12 +167,25 @@ class FileLogAppender : public LogAppender {
 public:
     using ptr = std::shared_ptr<FileLogAppender>;
     FileLogAppender(const std::string& filename);
-    ~FileLogAppender(){};
     void log(std::shared_ptr<sylar::Logger> logger, LogLevel::Level level, LogEvent::ptr event) override;
     bool reopen();
 private:  
     std::string m_filename;
     std::ofstream m_filestream;
 };
+
+
+class LoggerManager {
+public:
+    Logger::ptr getLogger(const std::string& name);
+    LoggerManager();
+
+    void init();
+private:
+    std::map<std::string, Logger::ptr> m_loggers;
+    Logger::ptr m_root;
+};
+
+using LoggerMgr = sylar::Singleton<LoggerManager>;
 
 }
