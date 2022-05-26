@@ -30,6 +30,8 @@
 #define SYLAR_LOG_ERROR(logger) SYLAR_LOG_LEVEL(logger, sylar::LogLevel::ERROR)
 #define SYLAR_LOG_FATAL(logger) SYLAR_LOG_LEVEL(logger, sylar::LogLevel::FATAL)
 
+#define SYLAR_LOG_ROOT() sylar::LoggerMgr::GetInstance()->getRoot()
+
 namespace sylar{
 
 class Logger;
@@ -181,6 +183,7 @@ public:
     LoggerManager();
 
     void init();
+    Logger::ptr getRoot() const {return m_root;};
 private:
     std::map<std::string, Logger::ptr> m_loggers;
     Logger::ptr m_root;
