@@ -5,6 +5,16 @@
 #include <iostream>
 #include <thread>
 
+/*
+    测试基础类型与模板类
+
+*/
+
+/*
+    测试key重复错误
+*/
+    // sylar::ConfigVar<std::unordered_set<int>>::ptr g_unordered_map_string_int_value_config_a = 
+    //     sylar::Config::Lookup("system.unordered_map", std::unordered_set<int>{}, "system map");
 
 
 void testLog(){
@@ -40,14 +50,94 @@ void testLog(){
 }
 
 void testConfig(){
-    sylar::ConfigVar<int>::ptr g_int_value_config = sylar::Config::Lookup("system.port", (int)8080, "system port");
-    sylar::ConfigVar<float>::ptr g_float_value_config = sylar::Config::Lookup("system.value", (float)10.19, "system port");
+        sylar::ConfigVar<int>::ptr g_int_value_config = 
+    sylar::Config::Lookup("system.port", (int)8080, "system port");
+sylar::ConfigVar<float>::ptr g_float_value_config = 
+    sylar::Config::Lookup("system.value", (float)10.19, "system value");
+
+sylar::ConfigVar<std::vector<int>>::ptr g_vec_int_value_config = 
+    sylar::Config::Lookup("system.int_vec", std::vector<int>{1,2,3}, "system int vec");
+
+sylar::ConfigVar<std::list<int>>::ptr g_list_int_value_config = 
+    sylar::Config::Lookup("system.int_list", std::list<int>{1,2,3}, "system int list");
+
+sylar::ConfigVar<std::set<int>>::ptr g_set_int_value_config = 
+    sylar::Config::Lookup("system.int_set", std::set<int>{1,2,3}, "system set");
+
+sylar::ConfigVar<std::unordered_set<int>>::ptr g_unordered_set_int_value_config = 
+    sylar::Config::Lookup("system.unordered_set", std::unordered_set<int>{1,2,3}, "system unordered_set");
+
+sylar::ConfigVar<std::map<std::string, int>>::ptr g_map_string_int_value_config = 
+    sylar::Config::Lookup("system.map", std::map<std::string, int>{{"1", 1},{"2", 2},{"3", 3}}, "system map");
+
+sylar::ConfigVar<std::unordered_map<std::string, int>>::ptr g_unordered_map_string_int_value_config = 
+    sylar::Config::Lookup("system.unordered_map", std::unordered_map<std::string, int>{{"1", 1},{"2", 2},{"3", 3}}, "system map");
     SYLAR_LOG_INFO(SYLAR_LOG_ROOT()) << g_int_value_config->getValue();
     SYLAR_LOG_INFO(SYLAR_LOG_ROOT()) << g_float_value_config->toString();
+    auto v = g_vec_int_value_config->getValue();
+    auto l = g_list_int_value_config->getValue();
+    auto s = g_set_int_value_config->getValue();
+    auto us = g_unordered_set_int_value_config->getValue();
+    auto m = g_map_string_int_value_config->getValue();
+    auto um = g_unordered_map_string_int_value_config->getValue();
+    
+    for (auto& i: v){
+        SYLAR_LOG_INFO(SYLAR_LOG_ROOT()) << "type: int_vec" << "\tval: " << i;
+    }
+
+    for (auto& i: l){
+        SYLAR_LOG_INFO(SYLAR_LOG_ROOT()) << "type: int_list" << "\tval: " << i;
+    }
+
+    for (auto& i: s){
+        SYLAR_LOG_INFO(SYLAR_LOG_ROOT()) << "type: int_set" << "\tval: " << i;
+    }
+
+    for (auto& i : us){
+        SYLAR_LOG_INFO(SYLAR_LOG_ROOT()) << "type: int_unordered_set" << "\tval: " << i;
+    }
+
+    for (auto p : m){
+        SYLAR_LOG_INFO(SYLAR_LOG_ROOT()) << "type: map_string_int" << "key: " << p.first << "\tval: " << p.second;
+    }
+
+    for (auto p : um){
+        SYLAR_LOG_INFO(SYLAR_LOG_ROOT()) << "type: unordered_map_string_int" << "key: " << p.first << "\tval: " << p.second;
+    }
+
     YAML::Node root = YAML::LoadFile("D:\\Programming\\sylar\\bin\\conf\\log.yml");
     sylar::Config::LoadFromYaml(root);
+    
+    std::cout << "---------------------------------------------------------------------------------------------------------------------------------------------" << std::endl;
+
     SYLAR_LOG_INFO(SYLAR_LOG_ROOT()) << g_int_value_config->getValue();
     SYLAR_LOG_INFO(SYLAR_LOG_ROOT()) << g_float_value_config->toString();
+    v = g_vec_int_value_config->getValue();
+    for (auto& i: v){
+        SYLAR_LOG_INFO(SYLAR_LOG_ROOT()) << "type: int_vec" << "\tval: " << i;
+    }
+    l = g_list_int_value_config->getValue();
+    for (auto& i: l){
+        SYLAR_LOG_INFO(SYLAR_LOG_ROOT()) << "type: int_list" << "\tval: " << i;
+    }
+    s = g_set_int_value_config->getValue();
+    for (auto& i: s){
+        SYLAR_LOG_INFO(SYLAR_LOG_ROOT()) << "type: set_list" << "\tval: " << i;
+    }
+    us = g_unordered_set_int_value_config->getValue();
+    for (auto& i : us){
+        SYLAR_LOG_INFO(SYLAR_LOG_ROOT()) << "type: int_unordered_set" << "\tval: " << i;
+    }
+
+    m = g_map_string_int_value_config->getValue();
+    for (auto p : m){
+        SYLAR_LOG_INFO(SYLAR_LOG_ROOT()) << "type: map_string_int" << "key: " << p.first << "\tval: " << p.second;
+    }
+
+    um = g_unordered_map_string_int_value_config->getValue();
+    for (auto p : um){
+        SYLAR_LOG_INFO(SYLAR_LOG_ROOT()) << "type: unordered_map_string_int" << "key: " << p.first << "\tval: " << p.second;
+    }
 }
 
 void print_yaml(const YAML::Node& node, int level){
@@ -74,8 +164,76 @@ void testyaml(){
     print_yaml(root, 0);
 }
 
+class Person{
+public:
+    Person(){}
+    std::string toString() const {
+        std::stringstream ss;
+        ss << "[Person name=" << m_name
+           << " age=" << m_age
+           << " sex=" << m_sex
+           << "]";
+        return ss.str();
+    }
+
+    bool operator==(const Person& other) const{
+        return m_name == other.m_name &&
+            m_age == other.m_age &&
+            m_sex == other.m_sex;
+    }
+    std::string m_name;
+    int m_age = 0;
+    bool m_sex = 0;
+
+};
+
+namespace sylar {
+
+template<>
+class LexicalCast<std::string, Person> {
+public:
+    Person operator()(const std::string& v) {
+        YAML::Node node = YAML::Load(v);
+        Person p;
+        p.m_name = node["name"].as<std::string>();
+        p.m_age = node["age"].as<int>();
+        p.m_sex = node["sex"].as<bool>();
+        return p;
+    }
+};
+
+template<>
+class LexicalCast<Person, std::string> {
+public:
+    std::string operator()(const Person& p) {
+        YAML::Node node;
+        node["name"] = p.m_name;
+        node["age"] = p.m_age;
+        node["sex"] = p.m_sex;
+        std::stringstream ss;
+        ss << node;
+        return ss.str();
+    }
+};
+
+}
+
+
+void test_log(){
+    static sylar::Logger::ptr system_log = SYLAR_LOG_NAME("system");
+    SYLAR_LOG_INFO(system_log) << "hello system" ;
+    std::cout << sylar::LoggerMgr::GetInstance()->toYamlString() << std::endl;
+    YAML::Node root = YAML::LoadFile("D:\\Programming\\sylar\\bin\\conf\\log.yml");
+    // std::cout << "===================" << std::endl;
+    sylar::Config::LoadFromYaml(root);
+    // std::cout << "===================" << std::endl;
+    std::cout << sylar::LoggerMgr::GetInstance()->toYamlString() << std::endl;  
+    SYLAR_LOG_INFO(system_log) << "hello system" ;
+    SYLAR_LOG_INFO(SYLAR_LOG_ROOT()) << "hello system" ;
+}
+
 int main(){
-    testConfig();
-    // testyaml();
+    // std::cout << "Main Start Here" << std::endl;
+    test_log();
     return 0;
 }
